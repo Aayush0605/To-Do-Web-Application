@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App</title>
+    
+    <!-- FullCalendar -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            padding: 20px;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+        
+        body.night-mode {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #f0f0f0;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        body.night-mode .container {
+            background: rgba(30, 30, 40, 0.95);
+            color: #f0f0f0;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        body.night-mode header {
+            border-bottom-color: #444;
+        }
+        
+        h1 {
+            font-weight: 700;
+            background: linear-gradient(to right, #12c2e9, #c471ed, #f64f59);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .view-btn, .mode-toggle {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            background: #f0f5f9;
+            color: #2c5364;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        body.night-mode .view-btn, 
+        body.night-mode .mode-toggle {
+            background: #2a2a3a;
+            color: #f0f0f0;
+        }
+        
+        .view-btn.active {
+            background: linear-gradient(135deg, #12c2e9, #c471ed);
+            color: white;
+        }
+        
+        .app-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 900px) {
+            .app-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .task-manager {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        body.night-mode .task-manager {
+            background: #2a2a3a;
+        }
+        
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: #2c5364;
+        }
+        
+        body.night-mode .app-title {
+            color: #a0a0e0;
+        }
+        
+        .app-title i {
+            font-size: 1.8rem;
+        }
+        
+        h2 {
+            margin-bottom: 20px;
+            color: #2c5364;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        body.night-mode h2 {
+            color: #a0a0e0;
+            border-bottom-color: #444;
+        }
+        
+        .form-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        input, select, button, textarea {
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        body.night-mode input,
+        body.night-mode select,
+        body.night-mode textarea {
+            background: #3a3a4a;
+            color: #f0f0f0;
+            border-color: #555;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #12c2e9;
+            box-shadow: 0 0 0 2px rgba(18, 194, 233, 0.2);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #12c2e9, #c471ed);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            flex: 1;
+            background: #f0f5f9;
+            color: #2c5364;
+            padding: 10px;
+            font-size: 14px;
+            min-width: 120px;
+        }
+        
+        body.night-mode .filter-btn {
+            background: #2a2a3a;
+            color: #f0f0f0;
+        }
+        
+        .filter-btn.active {
+            background: linear-gradient(135deg, #12c2e9, #c471ed);
+            color: white;
+        }
+        
+        .task-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            padding: 10px;
+        }
+        
+        body.night-mode .task-list {
+            border-color: #444;
+        }
+        
+        .task {
+            background: #f9fafb;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #12c2e9;
+            animation: fadeIn 0.4s forwards;
+        }
+        
+        body.night-mode .task {
+            background: #3a3a4a;
+        }
+        
+        .task.completed {
+            border-left-color: #4caf50;
+            opacity: 0.7;
+        }
+        
+        .task-content {
+            flex-grow: 1;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .task-btn {
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+        
+        .edit-btn {
+            background: #4caf50;
+        }
+        
+        .delete-btn {
+            background: #f44336;
+        }
+        
+        .complete-btn {
+            background: #2196f3;
+        }
+        
+        .date-time {
+            font-size: 12px;
+            color: #777;
+            margin-top: 5px;
+        }
+        
+        body.night-mode .date-time {
+            color: #aaa;
+        }
+        
+        .task-notes {
+            font-size: 14px;
+            color: #555;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        
+        body.night-mode .task-notes {
+            color: #bbb;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+        
+        .calendar-view {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        body.night-mode .calendar-view {
+            background: #2a2a3a;
+        }
+        
+        .calendar-container {
+            border-radius: 15px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        body.night-mode .calendar-container {
+            background: #3a3a4a;
+        }
+        
+        #calendar {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        /* Calendar header styling */
+        .fc-header-toolbar {
+            margin-bottom: 1em;
+        }
+
+        .fc-toolbar-chunk {
+            display: flex;
+            align-items: center;
+        }
+
+        .fc-today-button {
+            background: linear-gradient(135deg, #12c2e9, #c471ed) !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            font-weight: 600 !important;
+            margin-right: 10px !important;
+        }
+
+        .fc-button-group .fc-button {
+            background: #f0f5f9 !important;
+            color: #2c5364 !important;
+            border: 1px solid #ddd !important;
+            padding: 8px 12px !important;
+        }
+        
+        body.night-mode .fc-button-group .fc-button {
+            background: #3a3a4a !important;
+            color: #f0f0f0 !important;
+            border-color: #555 !important;
+        }
+
+        .fc-button-group .fc-button.fc-button-active {
+            background: linear-gradient(135deg, #12c2e9, #c471ed) !important;
+            color: white !important;
+            border: none !important;
+        }
+        
+        .table-calendar {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .table-calendar th {
+            background: linear-gradient(135deg, #12c2e9, #c471ed);
+            color: white;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .table-calendar td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+            height: 100px;
+            vertical-align: top;
+            position: relative;
+        }
+        
+        body.night-mode .table-calendar td {
+            border-color: #555;
+        }
+        
+        .table-calendar .other-month {
+            background-color: #f9f9f9;
+            color: #aaa;
+        }
+        
+        body.night-mode .table-calendar .other-month {
+            background-color: #2a2a3a;
+        }
+        
+        .table-calendar .today {
+            background-color: rgba(18, 194, 233, 0.1);
+            font-weight: bold;
+        }
+        
+        body.night-mode .table-calendar .today {
+            background-color: rgba(18, 194, 233, 0.2);
+        }
+        
+        .calendar-event {
+            font-size: 12px;
+            background: #4caf50;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-top: 5px;
+            display: block;
+            text-align: left;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        body.night-mode .stats {
+            border-top-color: #444;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f0f5f9;
+            flex: 1;
+            margin: 0 5px;
+        }
+        
+        body.night-mode .stat-box {
+            background: #3a3a4a;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #12c2e9;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #777;
+        }
+        
+        body.night-mode .stat-label {
+            color: #aaa;
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .export-btn {
+            flex: 1;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fc .fc-toolbar-title {
+            color: #2c5364;
+            font-weight: 600;
+        }
+        
+        body.night-mode .fc .fc-toolbar-title {
+            color: #f0f0f0;
+        }
+        
+        .fc-event {
+            border: none;
+            border-radius: 5px;
+            padding: 2px 4px;
+            font-weight: 500;
+        }
+        
+        .completed-task {
+            text-decoration: line-through;
+            color: #888;
+        }
+        
+        body.night-mode .completed-task {
+            color: #aaa;
+        }
+        
+        .edit-form {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+        }
+        
+        body.night-mode .edit-form {
+            background: #3a3a4a;
+            border-color: #555;
+        }
+        
+        .edit-form h3 {
+            margin-bottom: 15px;
+            color: #2c5364;
+        }
+        
+        body.night-mode .edit-form h3 {
+            color: #a0a0e0;
+        }
+        
+        .edit-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .edit-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .save-btn {
+            background: #4caf50;
+        }
+        
+        .cancel-btn {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>To-Do App</h1>
+            <div class="header-controls">
+                <div class="view-toggle">
+                    <button class="view-btn active" id="defaultView">Default View</button>
+                    <button class="view-btn" id="tableView">Table Calendar</button>
+                </div>
+                <button class="mode-toggle" id="modeToggle">🌙 Night Mode</button>
+            </div>
+        </header>
+        
+        <div class="app-content">
+            <div class="task-manager">
+                <div class="app-title">
+                    <i>📝</i>
+                    <h2>Task Manager</h2>
+                </div>
+                
+                <div class="form-controls">
+                    <input id="taskInput" type="text" placeholder="Task Name *" required>
+                    <input id="taskDate" type="date"  placeholder="Task Date *" required>
+                    <input id="taskTime" type="time"  placeholder="Task Time *" required>
+                    <textarea id="taskNotes" placeholder="Notes (optional)" rows="2"></textarea>
+                    <button id="addTaskBtn"><i>➕</i> Add Task</button>
+                </div>
+                
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">All Tasks</button>
+                    <button class="filter-btn" data-filter="today">Today</button>
+                    <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+                    <button class="filter-btn" data-filter="completed">Completed</button>
+                </div>
+                
+                <div class="task-list" id="taskList">
+                    <div class="empty-state">No tasks yet. Add a task to get started!</div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalTasks">0</div>
+                        <div class="stat-label">Total Tasks</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="todayTasks">0</div>
+                        <div class="stat-label">Today's Tasks</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="completedTasks">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                </div>
+                
+                <div class="export-buttons">
+                    <button class="export-btn" id="exportExcelBtn"><i>📊</i> Export Excel</button>
+                    <button class="export-btn" id="exportTxtBtn"><i>📝</i> Export TXT</button>
+                </div>
+            </div>
+            
+            <div class="calendar-view">
+                <div class="app-title">
+                    <i>📅</i>
+                    <h2>Calendar View</h2>
+                </div>
+                
+                <div class="calendar-container">
+                    <div id="calendar"></div>
+                </div>
+                
+                <table class="table-calendar" id="tableCalendar">
+                    <thead>
+                        <tr>
+                            <th>Sun</th>
+                            <th>Mon</th>
+                            <th>Tue</th>
+                            <th>Wed</th>
+                            <th>Thu</th>
+                            <th>Fri</th>
+                            <th>Sat</th>
+                        </tr>
+                    </thead>
+                    <tbody id="calendarBody">
+                        <!-- Calendar will be generated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+        let calendar;
+        let currentFilter = 'all';
+        let currentView = 'default';
+        let isNightMode = false;
+        
+        // Initialize the application
+        function init() {
+            displayTasks();
+            initCalendar();
+            generateTableCalendar();
+            updateStats();
+            
+            // Set today's date as default for the date picker
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('taskDate').value = today;
+            
+            // Set up event listeners
+            document.getElementById('addTaskBtn').addEventListener('click', addTask);
+            document.getElementById('defaultView').addEventListener('click', () => switchView('default'));
+            document.getElementById('tableView').addEventListener('click', () => switchView('table'));
+            document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+            document.getElementById('exportTxtBtn').addEventListener('click', exportTxt);
+            document.getElementById('modeToggle').addEventListener('click', toggleNightMode);
+            
+            // Set up filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const filter = e.target.getAttribute('data-filter');
+                    displayTasks(filter);
+                });
+            });
+        }
+        
+        // Toggle night mode
+        function toggleNightMode() {
+            isNightMode = !isNightMode;
+            document.body.classList.toggle('night-mode', isNightMode);
+            document.getElementById('modeToggle').textContent = isNightMode ? '☀️ Day Mode' : '🌙 Night Mode';
+        }
+        
+        // Switch between calendar views
+        function switchView(view) {
+            currentView = view;
+            
+            // Update button states
+            document.getElementById('defaultView').classList.toggle('active', view === 'default');
+            document.getElementById('tableView').classList.toggle('active', view === 'table');
+            
+            // Show/hide calendars
+            document.getElementById('calendar').style.display = view === 'default' ? 'block' : 'none';
+            document.getElementById('tableCalendar').style.display = view === 'table' ? 'table' : 'none';
+        }
+        
+        // Display tasks based on filter
+        function displayTasks(filterType = "all") {
+            currentFilter = filterType;
+            const list = document.getElementById("taskList");
+            list.innerHTML = "";
+            
+            // Update active filter button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-filter') === filterType) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            const today = new Date().toISOString().split("T")[0];
+            let filtered = tasks;
+            
+            if (filterType === "today") filtered = tasks.filter(t => t.date === today && !t.completed);
+            if (filterType === "upcoming") filtered = tasks.filter(t => t.date >= today && !t.completed);
+            if (filterType === "completed") filtered = tasks.filter(t => t.completed);
+            if (filterType === "all") filtered = tasks.filter(t => !t.completed);
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="empty-state">No ${filterType !== 'all' ? filterType : ''} tasks found.</div>`;
+                updateCalendar();
+                updateStats();
+                return;
+            }
+            
+            filtered.forEach((t, i) => {
+                const originalIndex = tasks.findIndex(task => 
+                    task.name === t.name && task.date === t.date && task.time === t.time
+                );
+                
+                const taskDiv = document.createElement("div");
+                taskDiv.className = t.completed ? "task completed" : "task";
+                taskDiv.innerHTML = `
+                    <div class="task-content">
+                        <div class="${t.completed ? 'completed-task' : ''}">${t.name}</div>
+                        <div class="date-time">${formatDate(t.date)} at ${t.time}</div>
+                        ${t.notes ? `<div class="task-notes">${t.notes}</div>` : ''}
+                    </div>
+                    <div class="task-actions">
+                        ${!t.completed ? `
+                            <button class="task-btn complete-btn" onclick="completeTask(${originalIndex})">✓</button>
+                            <button class="task-btn edit-btn" onclick="editTask(${originalIndex})">Edit</button>
+                        ` : ''}
+                        <button class="task-btn delete-btn" onclick="deleteTask(${originalIndex})">Delete</button>
+                    </div>
+                `;
+                list.appendChild(taskDiv);
+            });
+            
+            updateCalendar();
+            updateStats();
+        }
+        
+        // Format date for display
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+        
+        // Add a new task
+        function addTask() {
+            const name = document.getElementById("taskInput").value;
+            const date = document.getElementById("taskDate").value;
+            const time = document.getElementById("taskTime").value;
+            const notes = document.getElementById("taskNotes").value;
+            
+            if (!name) {
+                alert("Please enter a task name!");
+                document.getElementById("taskInput").focus();
+                return;
+            }
+            
+            if (!date || !time) {
+                alert("Please select both date and time!");
+                return;
+            }
+            
+            tasks.push({ name, date, time, notes, completed: false });
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            displayTasks(currentFilter);
+            
+            // Clear input fields
+            document.getElementById("taskInput").value = "";
+            document.getElementById("taskNotes").value = "";
+            
+            // Update table calendar
+            generateTableCalendar();
+            
+            // Show confirmation message
+            showNotification('Task added successfully!');
+        }
+        
+        // Edit a task - FIXED VERSION (allows editing all properties)
+        function editTask(index) {
+            const task = tasks[index];
+            
+            // Create edit form
+            const editForm = document.createElement('div');
+            editForm.className = 'edit-form';
+            editForm.innerHTML = `
+                <h3>Edit Task</h3>
+                <div class="edit-controls">
+                    <input type="text" id="editTaskName" value="${task.name}" placeholder="Task Name *" required>
+                    <input type="date" id="editTaskDate" value="${task.date}">
+                    <input type="time" id="editTaskTime" value="${task.time}">
+                    <textarea id="editTaskNotes" placeholder="Notes (optional)" rows="2">${task.notes || ''}</textarea>
+                    <div class="edit-actions">
+                        <button class="save-btn" onclick="saveTaskEdit(${index})">Save Changes</button>
+                        <button class="cancel-btn" onclick="cancelTaskEdit()">Cancel</button>
+                    </div>
+                </div>
+            `;
+            
+            // Replace task with edit form
+            const taskElements = document.querySelectorAll('.task');
+            if (taskElements[index]) {
+                taskElements[index].parentNode.replaceChild(editForm, taskElements[index]);
+            }
+        }
+        
+        // Save edited task
+        function saveTaskEdit(index) {
+            const newName = document.getElementById('editTaskName').value;
+            const newDate = document.getElementById('editTaskDate').value;
+            const newTime = document.getElementById('editTaskTime').value;
+            const newNotes = document.getElementById('editTaskNotes').value;
+            
+            if (!newName) {
+                alert("Please enter a task name!");
+                document.getElementById('editTaskName').focus();
+                return;
+            }
+            
+            if (!newDate || !newTime) {
+                alert("Please select both date and time!");
+                return;
+            }
+            
+            tasks[index].name = newName;
+            tasks[index].date = newDate;
+            tasks[index].time = newTime;
+            tasks[index].notes = newNotes;
+            
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            displayTasks(currentFilter);
+            generateTableCalendar();
+            showNotification('Task updated successfully!');
+        }
+        
+        // Cancel editing
+        function cancelTaskEdit() {
+            displayTasks(currentFilter);
+        }
+        
+        // Complete a task
+        function completeTask(index) {
+            tasks[index].completed = true;
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            displayTasks(currentFilter);
+            generateTableCalendar();
+            showNotification('Task marked as completed!');
+        }
+        
+        // Delete a task
+        function deleteTask(index) {
+            if (confirm("Are you sure you want to delete this task?")) {
+                tasks.splice(index, 1);
+                localStorage.setItem("tasks", JSON.stringify(tasks));
+                displayTasks(currentFilter);
+                generateTableCalendar();
+                showNotification('Task deleted successfully!');
+            }
+        }
+        
+        // Initialize the calendar with custom header layout
+        function initCalendar() {
+            calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+                initialView: 'dayGridMonth',
+                height: "auto",
+                headerToolbar: {
+                    left: 'prev,next',
+                    center: 'title',
+                    right: 'today dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                selectable: true,
+                dateClick: (info) => {
+                    // Filter tasks by the clicked date
+                    const clickedDate = info.dateStr;
+                    const filteredTasks = tasks.filter(t => t.date === clickedDate && !t.completed);
+                    
+                    const list = document.getElementById("taskList");
+                    list.innerHTML = "";
+                    
+                    if (filteredTasks.length === 0) {
+                        list.innerHTML = `<div class="empty-state">No tasks for ${clickedDate}</div>`;
+                    } else {
+                        filteredTasks.forEach((t, i) => {
+                            const originalIndex = tasks.findIndex(task => 
+                                task.name === t.name && task.date === t.date && task.time === t.time
+                            );
+                            const taskDiv = document.createElement("div");
+                            taskDiv.className = "task";
+                            taskDiv.innerHTML = `
+                                <div class="task-content">
+                                    <div>${t.name}</div>
+                                    <div class="date-time">${t.date} at ${t.time}</div>
+                                    ${t.notes ? `<div class="task-notes">${t.notes}</div>` : ''}
+                                </div>
+                                <div class="task-actions">
+                                    <button class="task-btn complete-btn" onclick="completeTask(${originalIndex})">✓</button>
+                                    <button class="task-btn edit-btn" onclick="editTask(${originalIndex})">Edit</button>
+                                    <button class="task-btn delete-btn" onclick="deleteTask(${originalIndex})">Delete</button>
+                                </div>
+                            `;
+                            list.appendChild(taskDiv);
+                        });
+                    }
+                },
+                events: tasks.filter(t => !t.completed).map(t => ({
+                    title: t.name + (t.notes ? ' 📝' : ''),
+                    start: `${t.date}T${t.time}`,
+                    color: getEventColor(t),
+                    extendedProps: {
+                        notes: t.notes
+                    }
+                })),
+                eventDidMount: function(info) {
+                    // Add tooltip for events with notes
+                    if (info.event.extendedProps.notes) {
+                        info.el.setAttribute('title', info.event.extendedProps.notes);
+                    }
+                }
+            });
+            calendar.render();
+        }
+        
+        // Update calendar events
+        function updateCalendar() {
+            if (calendar) {
+                calendar.removeAllEvents();
+                tasks.filter(t => !t.completed).forEach(t => {
+                    calendar.addEvent({
+                        title: t.name + (t.notes ? ' 📝' : ''),
+                        start: `${t.date}T${t.time}`,
+                        color: getEventColor(t),
+                        extendedProps: {
+                            notes: t.notes
+                        }
+                    });
+                });
+                calendar.render();
+            }
+        }
+        
+        // Generate table calendar (like in the image)
+        function generateTableCalendar() {
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
+            
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            // Get first day of month and number of days in month
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            // Get days from previous month
+            const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+            
+            let dayCount = 1;
+            let nextMonthDay = 1;
+            
+            for (let i = 0; i < 6; i++) {
+                const row = document.createElement('tr');
+                
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('td');
+                    
+                    if (i === 0 && j < firstDay) {
+                        // Days from previous month
+                        const prevMonthDay = daysInPrevMonth - (firstDay - j - 1);
+                        cell.textContent = prevMonthDay;
+                        cell.classList.add('other-month');
+                    } else if (dayCount > daysInMonth) {
+                        // Days from next month
+                        cell.textContent = nextMonthDay;
+                        cell.classList.add('other-month');
+                        nextMonthDay++;
+                    } else {
+                        // Current month days
+                        cell.textContent = dayCount;
+                        
+                        // Check if this is today
+                        const cellDate = new Date(currentYear, currentMonth, dayCount);
+                        if (cellDate.getDate() === today.getDate() && 
+                            cellDate.getMonth() === today.getMonth() && 
+                            cellDate.getFullYear() === today.getFullYear()) {
+                            cell.classList.add('today');
+                        }
+                        
+                        // Add events for this day
+                        const dateStr = formatDateForCalendar(currentYear, currentMonth, dayCount);
+                        const dayTasks = tasks.filter(t => t.date === dateStr && !t.completed);
+                        
+                        dayTasks.forEach(task => {
+                            const event = document.createElement('span');
+                            event.className = 'calendar-event';
+                            event.textContent = `${task.time} ${task.name}${task.notes ? ' 📝' : ''}`;
+                            if (task.notes) {
+                                event.setAttribute('title', task.notes);
+                            }
+                            cell.appendChild(event);
+                        });
+                        
+                        dayCount++;
+                    }
+                    
+                    row.appendChild(cell);
+                }
+                
+                calendarBody.appendChild(row);
+                
+                // Stop if we've displayed all days
+                if (dayCount > daysInMonth && nextMonthDay > 7) {
+                    break;
+                }
+            }
+        }
+        
+        // Format date for calendar (YYYY-MM-DD)
+        function formatDateForCalendar(year, month, day) {
+            return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        
+        // Get event color based on date
+        function getEventColor(t) {
+            const today = new Date().toISOString().split("T")[0];
+            if (t.date < today) return "#f44336"; // overdue
+            if (t.date === today) return "#ffeb3b"; // today
+            return "#4caf50"; // upcoming
+        }
+        
+        // Update statistics
+        function updateStats() {
+            const today = new Date().toISOString().split("T")[0];
+            const todayTasks = tasks.filter(t => t.date === today && !t.completed).length;
+            const completedTasks = tasks.filter(t => t.completed).length;
+            
+            document.getElementById("totalTasks").textContent = tasks.filter(t => !t.completed).length;
+            document.getElementById("todayTasks").textContent = todayTasks;
+            document.getElementById("completedTasks").textContent = completedTasks;
+        }
+        
+        // Export to Excel
+        function exportExcel() {
+            if (tasks.length === 0) {
+                alert("No tasks to export!");
+                return;
+            }
+            
+            try {
+                // Ask user for file name
+                const fileName = prompt("Enter a name for your Excel file:", "ToDo_Tasks_Export");
+                if (!fileName) return; // User cancelled
+                
+                // Convert tasks to worksheet data
+                const worksheetData = [
+                    ["Task Name", "Date", "Time", "Notes", "Status"], // Header row
+                    ...tasks.map(task => [
+                        task.name, 
+                        task.date, 
+                        task.time,
+                        task.notes || "",
+                        task.completed ? "Completed" : "Pending"
+                    ]) // Data rows
+                ];
+                
+                // Create workbook and worksheet
+                const workbook = XLSX.utils.book_new();
+                const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+                
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Tasks");
+                
+                // Export to file
+                XLSX.writeFile(workbook, `${fileName}.xlsx`);
+                showNotification('Excel file downloaded successfully!');
+            } catch (error) {
+                console.error("Error exporting Excel:", error);
+                alert("Error exporting to Excel. Please try again.");
+            }
+        }
+        
+        // Export to TXT
+        function exportTxt() {
+            if (tasks.length === 0) {
+                alert("No tasks to export!");
+                return;
+            }
+            
+            try {
+                // Ask user for file name
+                const fileName = prompt("Enter a name for your text file:", "ToDo_Tasks_Export");
+                if (!fileName) return; // User cancelled
+                
+                // Format tasks with additional details
+                const today = new Date().toISOString().split("T")[0];
+                let txtContent = `TO-DO TASK EXPORT\nGenerated on: ${new Date().toLocaleDateString()}\n\n`;
+                
+                // Add summary
+                const overdueCount = tasks.filter(t => t.date < today).length;
+                const todayCount = tasks.filter(t => t.date === today).length;
+                const upcomingCount = tasks.filter(t => t.date > today).length;
+                
+                txtContent += `TASK SUMMARY:\n`;
+                txtContent += `Total Tasks: ${tasks.length}\n`;
+                txtContent += `Overdue: ${overdueCount}\n`;
+                txtContent += `Due Today: ${todayCount}\n`;
+                txtContent += `Upcoming: ${upcomingCount}\n\n`;
+                
+                // Add tasks by category
+                if (overdueCount > 0) {
+                    txtContent += `OVERDUE TASKS:\n`;
+                    txtContent += `================\n`;
+                    tasks.filter(t => t.date < today).forEach(task => {
+                        txtContent += `• ${task.name} (Was due: ${formatDateForDisplay(task.date)} at ${task.time})\n`;
+                    });
+                    txtContent += `\n`;
+                }
+                
+                if (todayCount > 0) {
+                    txtContent += `TASKS DUE TODAY:\n`;
+                    txtContent += `================\n`;
+                    tasks.filter(t => t.date === today).forEach(task => {
+                        txtContent += `• ${task.name} (Due: Today at ${task.time})\n`;
+                    });
+                    txtContent += `\n`;
+                }
+                
+                if (upcomingCount > 0) {
+                    txtContent += `UPCOMING TASKS:\n`;
+                    txtContent += `================\n`;
+                    tasks.filter(t => t.date > today).forEach(task => {
+                        txtContent += `• ${task.name} (Due: ${formatDateForDisplay(task.date)} at ${task.time})\n`;
+                    });
+                }
+                
+                // Create and download the file
+                const blob = new Blob([txtContent], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${fileName}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                showNotification('TXT file downloaded successfully!');
+            } catch (error) {
+                console.error("Error exporting TXT:", error);
+                alert("Error exporting to TXT. Please try again.");
+            }
+        }
+
+        // Helper function for date formatting in text export
+        function formatDateForDisplay(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+        
+        // Show notification
+        function showNotification(message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.right = '20px';
+            notification.style.backgroundColor = '#12c2e9';
+            notification.style.color = 'white';
+            notification.style.padding = '10px 20px';
+            notification.style.borderRadius = '5px';
+            notification.style.boxShadow = '0 3px 10px rgba(0,0,0,0.2)';
+            notification.style.zIndex = '1000';
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 500);
+            }, 3000);
+        }
+        
+        // Initialize the app when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
